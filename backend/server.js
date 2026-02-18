@@ -6,32 +6,16 @@ const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
-const prisma = new PrismaClient({
-  errorFormat: 'pretty'
-});
+const prisma = new PrismaClient();
 const SECRET = "unipark_super_secret_key_2024";
 
 app.use(cors());
 app.use(express.json());
 
-// Health check endpoint - ALWAYS works, even without database
+// --- HEALTH CHECK ---
 app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ status: 'online', timestamp: new Date() });
 });
-
-// Database connection test
-let dbConnected = false;
-
-(async () => {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    dbConnected = true;
-    console.log("✅ Database connected");
-  } catch (e) {
-    console.warn("⚠️  Database connection failed, running in mock mode:", e.message);
-    dbConnected = false;
-  }
-})();
 
 // --- AUTHENTICATION ---
 
@@ -74,10 +58,6 @@ app.post('/login', async (req, res) => {
 // Get complete dashboard state (Slots + History + Vehicles)
 app.get('/dashboard-state', async (req, res) => {
   try {
-    if (!dbConnected) {
-      return res.status(503).json({ error: "Database unavailable", mock: true });
-    }
-    
     // 1. Get All Slots
     const slots = await prisma.slot.findMany();
     
@@ -100,8 +80,8 @@ app.get('/dashboard-state', async (req, res) => {
 
     res.json({ slots, logs, vehicles });
   } catch (e) {
-    console.error("Dashboard state error:", e);
-    res.status(503).json({ error: "Database unavailable", mock: true });
+    console.error(e);
+    res.status(500).json({ error: e.message });
   }
 });
 
@@ -229,13 +209,4 @@ app.post('/seed-slots', async (req, res) => {
     res.json({ message: "Seeded 250 slots" });
 });
 
-app.listen(4000, '0.0.0.0', () => {
-    console.log("✅ UniPark Backend running on http://localhost:4000");
-    console.log(dbConnected ? "✅ Database connected" : "⚠️  Using mock mode (database unavailable)");
-});
-
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
+app.listen(4000, () => console.log("✅ UniPark Backend running on http://localhost:4000"));

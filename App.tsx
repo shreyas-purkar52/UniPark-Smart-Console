@@ -11,7 +11,6 @@ import { Settings } from './views/Settings';
 import { Profile } from './views/Profile';
 import { StatusFooter } from './components/StatusFooter';
 import { NotificationToast } from './components/NotificationToast';
-import { SystemWarning } from './components/SystemWarning';
 import { ViewType, ParkingSlot, ParkingLog, Vehicle, AuthUser } from './types';
 import { STORAGE_KEYS } from './constants';
 import { api } from './api';
@@ -34,41 +33,8 @@ const App: React.FC = () => {
   const [logs, setLogs] = useState<ParkingLog[]>([]);
   
   // --- SYSTEM HEALTH ---
-  // null: checking, true: online, false: offline
-  const [isBackendConnected, setIsBackendConnected] = useState<boolean | null>(null);
-  const [wasOnlineRef, setWasOnlineRef] = useState<boolean>(true); // Track previous state for recovery notifications
-
-  const checkConnectivity = async () => {
-      try {
-          const connected = await api.checkHealth();
-          
-          // Show notification when backend comes back online
-          if (connected && !wasOnlineRef) {
-              handleShowNotification('Backend Online — System Operational', 'success');
-              setWasOnlineRef(true);
-          } else if (!connected && wasOnlineRef) {
-              // Optionally notify on disconnect
-              setWasOnlineRef(false);
-          }
-          
-          setIsBackendConnected(connected);
-          return connected;
-      } catch (e) {
-          console.error("Health check failed:", e);
-          setIsBackendConnected(false);
-          return false;
-      }
-  };
-
-  const handleShowNotification = (message: string, type: 'success' | 'info' = 'success') => {
-    if (notificationTimeoutRef.current) {
-        window.clearTimeout(notificationTimeoutRef.current);
-    }
-    setNotification({ message, type });
-    notificationTimeoutRef.current = window.setTimeout(() => {
-        setNotification(null);
-    }, 3000);
-  };
+  // In standalone mode, we assume true, but keeping state structure for future extensibility
+  const [isBackendConnected, setIsBackendConnected] = useState(true);
 
   const fetchData = async () => {
       try {
@@ -76,9 +42,6 @@ const App: React.FC = () => {
           setSlots(slots);
           setLogs(logs);
           setVehicles(vehicles);
-          // If fetch succeeds, we assume we are somewhat connected, 
-          // but we rely on explicit health check for the footer status
-          checkConnectivity();
       } catch (e) {
           console.error("Failed to sync data", e);
       }
@@ -86,26 +49,20 @@ const App: React.FC = () => {
 
   // --- SYSTEM BOOTSTRAP ---
   useEffect(() => {
-    // Use async IIFE to properly handle async operations during bootstrap
-    (async () => {
-        // 0. Check Backend Connection immediately
-        await checkConnectivity();
-
-        // 1. Check for Active Session
-        const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
-        if (savedSession) {
-            try {
-                setCurrentUser(JSON.parse(savedSession));
-            } catch (e) {
-                localStorage.removeItem(STORAGE_KEYS.SESSION);
-            }
+    // 1. Check for Active Session
+    const savedSession = localStorage.getItem(STORAGE_KEYS.SESSION);
+    if (savedSession) {
+        try {
+            setCurrentUser(JSON.parse(savedSession));
+        } catch (e) {
+            localStorage.removeItem(STORAGE_KEYS.SESSION);
         }
-        
-        // 2. Initial Data Fetch
-        fetchData();
+    }
+    
+    // 2. Initial Data Fetch
+    fetchData();
 
-        setIsAuthChecking(false);
-    })();
+    setIsAuthChecking(false);
   }, []);
 
   // --- DERIVED VIEWS ---
@@ -130,21 +87,23 @@ const App: React.FC = () => {
     const timer = setInterval(() => {
         const now = new Date();
         setCurrentTime(now);
-        
         // Refresh data every 30s
         if (now.getSeconds() % 30 === 0) {
             fetchData();
         }
-        
-        // More frequent connectivity checks when offline (every 10s)
-        // Normal checks when online (every 30s)
-        const checkFrequency = isBackendConnected ? 30 : 10;
-        if (now.getSeconds() % checkFrequency === 0) {
-            checkConnectivity();
-        }
     }, 1000);
     return () => clearInterval(timer);
-  }, [isBackendConnected]);
+  }, []);
+
+  const handleShowNotification = (message: string, type: 'success' | 'info' = 'success') => {
+    if (notificationTimeoutRef.current) {
+        window.clearTimeout(notificationTimeoutRef.current);
+    }
+    setNotification({ message, type });
+    notificationTimeoutRef.current = window.setTimeout(() => {
+        setNotification(null);
+    }, 3000);
+  };
 
   // --- ACTIONS ---
   const handleLogin = (user: AuthUser) => {
@@ -243,7 +202,6 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen bg-background-dark text-white overflow-hidden font-sans relative">
-      <SystemWarning isOnline={isBackendConnected} />
       <Sidebar activeView={currentView} onViewChange={setCurrentView} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header currentTime={currentTime} user={currentUser} />
