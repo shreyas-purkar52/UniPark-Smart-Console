@@ -1,5 +1,5 @@
 
-import { ParkingSlot, Vehicle, ParkingLog, Role, AuthUser } from './types';
+import { ParkingSlot, Vehicle, ParkingLog, Role, SlotStatus, AuthUser } from './types';
 
 export const STORAGE_KEYS = {
   SLOTS: 'unipark_db_slots',
@@ -20,7 +20,6 @@ export const LEVELS = [
 export const INITIAL_LOGS: ParkingLog[] = [];
 
 // MOCK DATABASE: USERS TABLE
-// In a real app, this would be in a secure backend DB with hashed passwords
 export const MOCK_USERS_DB: Record<string, AuthUser & { passwordHash: string }> = {
   'admin@unipark.com': {
     id: 'USR-ADM-001',
@@ -30,7 +29,7 @@ export const MOCK_USERS_DB: Record<string, AuthUser & { passwordHash: string }> 
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200',
     stationId: 'Central Command',
     lastLogin: new Date().toISOString(),
-    passwordHash: 'password123' // Simple simulation
+    passwordHash: 'password123'
   },
   'guard@unipark.com': {
     id: 'USR-SEC-042',
@@ -57,6 +56,106 @@ export const MOCK_GATE_VISITOR: Vehicle = {
   entryTime: new Date().toLocaleTimeString('en-US', { hour12: false })
 };
 
+// Slots 101–196 on Level 1 are permanently reserved for specific university roles
+const VIP_RESERVED_ROLES: Record<number, string> = {
+  101: 'Chancellor',
+  102: 'President',
+  103: 'Vice Chancellor',
+  104: 'Provost',
+  105: 'Pro Vice Chancellor',
+  106: 'COO',
+  107: 'CFO',
+  108: 'CTO',
+  109: 'CIO',
+  110: 'Dean',
+  111: 'Associate Dean',
+  112: 'Assistant Dean',
+  113: 'Dir. Academic Affairs',
+  114: 'Registrar',
+  115: 'Controller of Exam',
+  116: 'Academic Coordinator',
+  117: 'Program Director',
+  118: 'HOD',
+  119: 'Dept. Coordinator',
+  120: 'Professor',
+  121: 'Assoc. Professor',
+  122: 'Asst. Professor',
+  123: 'Senior Lecturer',
+  124: 'Lecturer',
+  125: 'Teaching Assistant',
+  126: 'Research Fellow',
+  127: 'Lab Instructor',
+  128: 'Visiting Faculty',
+  129: 'Adjunct Professor',
+  130: 'Dean of Students',
+  131: 'Student Welfare',
+  132: 'Student Affairs Dir.',
+  133: 'Counselor',
+  134: 'Career Guidance',
+  135: 'Placement Officer',
+  136: 'Internship Coord.',
+  137: 'Club Coordinator',
+  138: 'Sports Director',
+  139: 'Cultural Coord.',
+  140: 'Hostel Warden',
+  141: 'Admin. Officer',
+  142: 'Office Supt.',
+  143: 'Exec. Assistant',
+  144: 'Front Desk Officer',
+  145: 'Receptionist',
+  146: 'Documentation',
+  147: 'Compliance Officer',
+  148: 'PRO',
+  149: 'Legal Advisor',
+  150: 'Finance Director',
+  151: 'Accounts Manager',
+  152: 'Accountant',
+  153: 'Cashier',
+  154: 'Audit Officer',
+  155: 'Procurement',
+  156: 'HR Director',
+  157: 'HR Manager',
+  158: 'Recruitment',
+  159: 'Training Coord.',
+  160: 'Payroll Officer',
+  161: 'IT Director',
+  162: 'Sys. Administrator',
+  163: 'Network Engineer',
+  164: 'Software Developer',
+  165: 'Web Administrator',
+  166: 'Database Admin',
+  167: 'Cybersecurity',
+  168: 'Tech. Support',
+  169: 'Chief Librarian',
+  170: 'Asst. Librarian',
+  171: 'Archivist',
+  172: 'Library Assistant',
+  173: 'Research Director',
+  174: 'Innovation Mgr.',
+  175: 'Research Coord.',
+  176: 'Patent Officer',
+  177: 'Project Manager',
+  178: 'Campus Manager',
+  179: 'Maintenance Supvr.',
+  180: 'Transport Manager',
+  181: 'Security Officer',
+  182: 'Housekeeping Supvr.',
+  183: 'Cafeteria Manager',
+  184: 'Admissions Director',
+  185: 'Admissions Counselor',
+  186: 'Marketing Manager',
+  187: 'Social Media Mgr.',
+  188: 'Branding Coord.',
+  189: 'Event Manager',
+  190: 'Student Council Pres.',
+  191: 'Student Council VP',
+  192: 'General Secretary',
+  193: 'Treasurer',
+  194: 'Class Rep (CR)',
+  195: 'Club President',
+  196: 'Event Coordinator',
+};
+
 // Database Initialization Logic
 export const initializeParkingDatabase = (): ParkingSlot[] => {
   const allSlots: ParkingSlot[] = [];
@@ -65,7 +164,7 @@ export const initializeParkingDatabase = (): ParkingSlot[] => {
     // Generate 500 slots per level (101 to 600)
     for (let i = 0; i < 500; i++) {
       const slotNum = 101 + i;
-      
+
       // Determine designated category
       let category: Role = 'STUDENT';
       if (level.id === 1) {
@@ -74,12 +173,21 @@ export const initializeParkingDatabase = (): ParkingSlot[] => {
         category = (level.category as any) === 'MIXED' ? 'FACULTY' : (level.category as Role);
       }
 
+      let status: SlotStatus = 'AVAILABLE';
+      let reservedFor: string | undefined = undefined;
+
+      if (level.id === 1 && VIP_RESERVED_ROLES[slotNum]) {
+        status = 'RESERVED';
+        reservedFor = VIP_RESERVED_ROLES[slotNum];
+      }
+
       allSlots.push({
         slotId: `${level.id}-${slotNum}`,
         levelId: level.id,
         slotNumber: slotNum,
-        status: 'AVAILABLE', // Fresh State
+        status: status,
         category: category,
+        reservedFor: reservedFor,
         vehicleId: undefined,
         occupant: undefined
       });

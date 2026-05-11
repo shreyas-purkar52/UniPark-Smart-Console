@@ -2,6 +2,9 @@
 import { AuthUser, ParkingSlot, ParkingLog, Vehicle, Role } from './types';
 import { MOCK_USERS_DB, STORAGE_KEYS, initializeParkingDatabase } from './constants';
 
+// Increment this whenever the slot schema/roles change — forces auto-reinit
+const DB_VERSION = '2025-05-11-v3';
+
 // Helper to simulate delay for realistic feel
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -68,6 +71,16 @@ class ApiClient {
   // --- LOCAL STORAGE HELPERS ---
 
   private getMockState() {
+    // Auto-reinitialize DB if version has changed (new roles / schema update)
+    const storedVersion = localStorage.getItem('unipark_db_version');
+    if (storedVersion !== DB_VERSION) {
+        console.log(`[UniPark] DB version mismatch (${storedVersion} → ${DB_VERSION}). Re-initializing...`);
+        localStorage.removeItem(STORAGE_KEYS.SLOTS);
+        localStorage.removeItem(STORAGE_KEYS.VEHICLES);
+        localStorage.removeItem(STORAGE_KEYS.LOGS);
+        localStorage.setItem('unipark_db_version', DB_VERSION);
+    }
+
     const savedSlots = localStorage.getItem(STORAGE_KEYS.SLOTS);
     const savedVehicles = localStorage.getItem(STORAGE_KEYS.VEHICLES);
     const savedLogs = localStorage.getItem(STORAGE_KEYS.LOGS);
@@ -130,6 +143,29 @@ class ApiClient {
 
     // Free Slot
     state.slots = state.slots.map(s => s.slotId === slot.slotId ? { ...s, status: 'AVAILABLE', vehicleId: undefined } : s);
+
+    this.saveMockState(state);
+  }
+
+  async clearAllAllottedSlots(): Promise<void> {
+    await delay(1000); // Simulate large operation
+    const state = this.getMockState();
+    
+    // Process exits for all active logs
+    state.logs = state.logs.map(log => {
+        if (log.status === 'Active') {
+            return { ...log, status: 'Completed', exitTime: new Date().toLocaleTimeString('en-US', { hour12: false }) };
+        }
+        return log;
+    });
+
+    // Mark all non-reserved slots as AVAILABLE
+    state.slots = state.slots.map(s => {
+        if (s.status === 'OCCUPIED') {
+            return { ...s, status: 'AVAILABLE', vehicleId: undefined };
+        }
+        return s;
+    });
 
     this.saveMockState(state);
   }

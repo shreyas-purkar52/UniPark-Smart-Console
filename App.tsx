@@ -22,7 +22,24 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<ViewType>('DASHBOARD');
   const [currentTime, setCurrentTime] = useState(new Date());
-  
+
+  // --- THEME ---
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    return localStorage.getItem('unipark_theme') !== 'light';
+  });
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove('light-mode');
+      localStorage.setItem('unipark_theme', 'dark');
+    } else {
+      document.documentElement.classList.add('light-mode');
+      localStorage.setItem('unipark_theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const handleToggleTheme = () => setIsDarkMode(prev => !prev);
+
   // Notification System
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'info'} | null>(null);
   const notificationTimeoutRef = useRef<number | null>(null);
@@ -31,9 +48,8 @@ const App: React.FC = () => {
   const [slots, setSlots] = useState<ParkingSlot[]>([]);
   const [vehicles, setVehicles] = useState<Record<string, Vehicle>>({});
   const [logs, setLogs] = useState<ParkingLog[]>([]);
-  
+
   // --- SYSTEM HEALTH ---
-  // In standalone mode, we assume true, but keeping state structure for future extensibility
   const [isBackendConnected, setIsBackendConnected] = useState(true);
 
   const fetchData = async () => {
@@ -87,8 +103,8 @@ const App: React.FC = () => {
     const timer = setInterval(() => {
         const now = new Date();
         setCurrentTime(now);
-        // Refresh data every 30s
-        if (now.getSeconds() % 30 === 0) {
+        // Refresh data every 5s for near-real-time dashboard sync
+        if (now.getSeconds() % 5 === 0) {
             fetchData();
         }
     }, 1000);
@@ -123,8 +139,8 @@ const App: React.FC = () => {
       const slot = slots.find(s => s.slotId === slotId);
       if (!slot) return;
 
-      // Optimistic Update
-      setSlots(prev => prev.map(s => s.slotId === slotId ? { ...s, status: 'RESERVED' } : s));
+      // Optimistic Update — mark as OCCUPIED so it's no longer treated as available
+      setSlots(prev => prev.map(s => s.slotId === slotId ? { ...s, status: 'OCCUPIED', vehicleId: vehicle.vehicleId } : s));
 
       try {
           await api.allocateSlot(slot, vehicle);
@@ -146,6 +162,19 @@ const App: React.FC = () => {
           fetchData();
       } catch (e) {
           handleShowNotification("Exit Process Error", 'info');
+      }
+  };
+
+  const handleClearAllSlots = async () => {
+      if (!window.confirm("CRITICAL: Are you sure you want to clear ALL allotted slots? This will process exits for all active vehicles.")) return;
+      
+      handleShowNotification("Purging all active slots...", 'info');
+      try {
+          await api.clearAllAllottedSlots();
+          handleShowNotification("System Purge Complete", 'success');
+          fetchData();
+      } catch (e) {
+          handleShowNotification("Purge Failed", 'info');
       }
   };
 
@@ -202,9 +231,9 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen bg-background-dark text-white overflow-hidden font-sans relative">
-      <Sidebar activeView={currentView} onViewChange={setCurrentView} />
+      <Sidebar activeView={currentView} onViewChange={setCurrentView} onClearAll={handleClearAllSlots} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header currentTime={currentTime} user={currentUser} />
+        <Header currentTime={currentTime} user={currentUser} onLogout={handleLogout} isDarkMode={isDarkMode} onToggleTheme={handleToggleTheme} />
         <main className="flex-1 flex overflow-hidden relative">
           {renderView()}
           {notification && (

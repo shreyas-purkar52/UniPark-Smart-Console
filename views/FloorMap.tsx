@@ -33,28 +33,41 @@ const DrivingLane = ({ direction = 'left' }: { direction?: 'left' | 'right' }) =
 );
 
 const getSlotColorClasses = (slot: ParkingSlot, selectedLevelId: number, selectedSlotId: string | null) => {
-    const isLevel1 = selectedLevelId === 1;
-    const isVip = slot.category === 'VIP'; 
     const isOccupied = slot.status === 'OCCUPIED';
-    const isReserved = slot.status === 'RESERVED'; 
+    const isReserved = slot.status === 'RESERVED';
     const isSelected = slot.slotId === selectedSlotId;
 
-    let classes = "relative transition-all duration-300 rounded-lg shadow-lg border flex items-center justify-center ";
+    // Level 1 slots 197–200 are special VIP unresolved slots
+    const isSpecialVip = slot.levelId === 1 && slot.slotNumber >= 197 && slot.slotNumber <= 200;
 
+    let classes = "relative transition-all duration-500 rounded-xl shadow-lg border flex items-center justify-center overflow-hidden cursor-pointer ";
+
+    // Permanently reserved (Level 1, 101–196): always white with lock
     if (isReserved) {
-      return classes + "bg-primary border-primary text-black z-20 animate-pulse shadow-[0_0_15px_rgba(242,204,13,0.8)]";
-    }
-    if (isSelected) {
-      classes += "ring-2 ring-white z-30 scale-110 ";
+      return classes + "bg-white border-slate-200 text-black z-20 shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105";
     }
 
-    if (isLevel1 && isVip) {
-      if (isOccupied) return classes + "bg-white border-white text-black shadow-[0_0_10px_rgba(255,255,255,0.3)]";
-      return classes + "bg-blue-600 border-blue-500 text-white shadow-[0_0_8px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_0_12px_rgba(37,99,235,0.6)]";
+    if (isSpecialVip) {
+      // Level 1 slots 197–200: Blue → Yellow → White
+      if (isOccupied) {
+        classes += "bg-white border-white/80 text-black shadow-[0_0_20px_rgba(255,255,255,0.25)] animate-in fade-in zoom-in duration-500 ";
+      } else if (isSelected) {
+        classes += "bg-yellow-400 border-yellow-300 text-black shadow-[0_0_18px_rgba(250,204,21,0.7)] ring-2 ring-yellow-300 ring-offset-1 ring-offset-black z-40 scale-110 ";
+      } else {
+        classes += "bg-blue-600 border-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)] hover:brightness-125 hover:scale-105 ";
+      }
     } else {
-      if (isOccupied) return classes + "bg-red-600 border-red-500 text-white shadow-[0_0_8px_rgba(220,38,38,0.4)]";
-      return classes + "bg-emerald-500 border-emerald-400 text-black font-black shadow-[0_0_8px_rgba(16,185,129,0.4)] hover:bg-emerald-400 hover:shadow-[0_0_12px_rgba(16,185,129,0.6)]";
+      // Normal slots (Levels 2–5 and remaining Level 1 slots): Green → Yellow → Red
+      if (isOccupied) {
+        classes += "bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/30 animate-in fade-in zoom-in duration-500 ";
+      } else if (isSelected) {
+        classes += "bg-yellow-400 border-yellow-300 text-black shadow-[0_0_18px_rgba(250,204,21,0.7)] ring-2 ring-yellow-300 ring-offset-1 ring-offset-black z-40 scale-110 ";
+      } else {
+        classes += "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.35)] hover:brightness-110 hover:scale-105 ";
+      }
     }
+
+    return classes;
 };
 
 const ParkingRow: React.FC<{
@@ -73,24 +86,51 @@ const ParkingRow: React.FC<{
           onClick={() => onSlotClick(slot)}
           className={`${getSlotColorClasses(slot, selectedLevelId, selectedSlotId)} aspect-[4/5] cursor-pointer group`}
         >
+          {/* Hover Card */}
           {slot.status === 'OCCUPIED' && slot.occupant && (
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 bg-[#0e0e0e]/95 backdrop-blur-md border border-white/10 p-3 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-none z-50 translate-y-2 group-hover:translate-y-0">
-               <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0e0e0e] border-r border-b border-white/10 rotate-45 transform"></div>
-               <div className="relative z-10 flex flex-col gap-1.5 text-left">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                     <span className="text-[8px] font-black text-primary uppercase tracking-widest">Parked</span>
-                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 bg-[#0a0a0a] border border-white/10 p-3 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none z-50 translate-y-4 group-hover:translate-y-0 scale-95 group-hover:scale-100">
+               <div className="flex items-center gap-3 border-b border-white/5 pb-2.5 mb-2.5">
+                  <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                    <img src={slot.occupant.photoUrl || `https://ui-avatars.com/api/?name=${slot.occupant.ownerName}`} alt="Avatar" className="w-full h-full object-cover" />
                   </div>
-                  <div>
-                     <span className="block text-[9px] text-slate-500 font-bold uppercase tracking-wider mb-0.5">Plate</span>
-                     <span className="block text-xs font-mono font-black text-white">{slot.occupant.plateNumber}</span>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-white truncate leading-tight uppercase">{slot.occupant.ownerName}</p>
+                    <p className="text-[8px] font-bold text-primary tracking-widest uppercase">{slot.occupant.role}</p>
                   </div>
                </div>
+               <div className="space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-[7px] text-slate-500 font-black uppercase">Plate</span>
+                    <span className="text-[9px] font-mono font-black text-white">{slot.occupant.plateNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[7px] text-slate-500 font-black uppercase">Time</span>
+                    <span className="text-[9px] font-mono font-black text-emerald-400">{slot.occupant.entryTime}</span>
+                  </div>
+               </div>
+               <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-[#0a0a0a] border-r border-b border-white/10 rotate-45"></div>
             </div>
           )}
-          <span className="relative z-10 text-[10px] font-black select-none tracking-tight">
-            {slot.slotNumber}
-          </span>
+
+          {/* Slot Content */}
+          {slot.status === 'OCCUPIED' ? (
+             <div className="flex flex-col items-center gap-1">
+                <span className="material-icons-round text-sm opacity-80">directions_car</span>
+                <span className="text-[8px] font-black opacity-70 tracking-tighter">{slot.slotNumber}</span>
+             </div>
+          ) : slot.reservedFor ? (
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-0.5 overflow-hidden">
+               <span className="text-[8px] font-black text-black leading-none">{slot.slotNumber}</span>
+               <span className="material-icons-round text-black" style={{fontSize: '9px', lineHeight: '1'}}>lock</span>
+               <span className="text-[4.5px] font-black text-black uppercase tracking-tight text-center leading-tight w-full truncate px-0.5">
+                   {slot.reservedFor}
+               </span>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center">
+               <span className="text-[10px] font-black opacity-90">{slot.slotNumber}</span>
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -136,8 +176,14 @@ export const FloorMap: React.FC<FloorMapProps> = ({
   const [selectedLevelId, setSelectedLevelId] = useState(2); 
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [isScannerExpanded, setIsScannerExpanded] = useState(false);
-  const [gateVisitor, setGateVisitor] = useState<Vehicle>(generateNextVisitor()); // Start with random
+  const [gateVisitor, setGateVisitor] = useState<Vehicle>(generateNextVisitor());
+  const [isScanning, setIsScanning] = useState(false);
+  const [reservedInfoSlot, setReservedInfoSlot] = useState<ParkingSlot | null>(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [scanToast, setScanToast] = useState<{ plate: string; level: number; slot: number } | null>(null);
+  const [autoScanEnabled, setAutoScanEnabled] = useState(false);
+  const scanToastTimerRef = useRef<number | null>(null);
+  const autoScanIntervalRef = useRef<number | null>(null);
   
   const [manualForm, setManualForm] = useState<{ plate: string, name: string, phone: string, role: Role, studentType: StudentType }>({ 
       plate: '', name: '', phone: '', role: 'VISITOR', studentType: 'LOCALITE' 
@@ -145,6 +191,36 @@ export const FloorMap: React.FC<FloorMapProps> = ({
   
   const [useLiveCamera, setUseLiveCamera] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Refs so setTimeout callbacks always read the LATEST props/state (fixes stale closure)
+  const slotsByLevelRef = useRef(slotsByLevel);
+  const onAllocateRef = useRef(onAllocate);
+  const onShowNotificationRef = useRef(onShowNotification);
+  useEffect(() => { slotsByLevelRef.current = slotsByLevel; }, [slotsByLevel]);
+  useEffect(() => { onAllocateRef.current = onAllocate; }, [onAllocate]);
+  useEffect(() => { onShowNotificationRef.current = onShowNotification; }, [onShowNotification]);
+
+  // Auto-scan: first fires after 3s, then every 8s
+  useEffect(() => {
+    let initialTimer: number | null = null;
+    if (autoScanEnabled) {
+      initialTimer = window.setTimeout(() => {
+        handleSimulateScan();
+        autoScanIntervalRef.current = window.setInterval(() => {
+          handleSimulateScan();
+        }, 8000);
+      }, 3000);
+    } else {
+      if (autoScanIntervalRef.current) {
+        window.clearInterval(autoScanIntervalRef.current);
+        autoScanIntervalRef.current = null;
+      }
+    }
+    return () => {
+      if (initialTimer) window.clearTimeout(initialTimer);
+      if (autoScanIntervalRef.current) window.clearInterval(autoScanIntervalRef.current);
+    };
+  }, [autoScanEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentLevelSlots = slotsByLevel[selectedLevelId] || [];
   const selectedSlot = currentLevelSlots.find(s => s.slotId === selectedSlotId);
@@ -169,12 +245,54 @@ export const FloorMap: React.FC<FloorMapProps> = ({
   }, [currentLevelSlots]);
 
   const handleConfirmAllocation = () => {
-      if (!selectedSlot) return;
+      if (!selectedSlot || !gateVisitor) return;
       onAllocate(selectedSlot.slotId, gateVisitor);
       setSelectedSlotId(null);
       setTimeout(() => {
           setGateVisitor(generateNextVisitor());
       }, 1500);
+  };
+
+  const autoAllocateVisitor = (visitor: Vehicle) => {
+      // Read freshest data from ref
+      const latestSlots = slotsByLevelRef.current;
+      let targetLevels: number[] = [2, 3, 4];
+      if (visitor.role === 'VISITOR') targetLevels = [5];
+      else if (visitor.role === 'VIP' || visitor.role === 'FACULTY') targetLevels = [1, 2];
+      
+      let freeSlot: ParkingSlot | undefined;
+      for (const lvl of targetLevels) {
+          freeSlot = (latestSlots[lvl] || []).find(s => s.status === 'AVAILABLE');
+          if (freeSlot) break;
+      }
+
+      if (freeSlot) {
+          onAllocateRef.current(freeSlot.slotId, visitor);
+          setSelectedSlotId(null);
+          setSelectedLevelId(freeSlot.levelId);
+          // Show bottom-right toast
+          if (scanToastTimerRef.current) window.clearTimeout(scanToastTimerRef.current);
+          setScanToast({ plate: visitor.plateNumber, level: freeSlot.levelId, slot: freeSlot.slotNumber });
+          scanToastTimerRef.current = window.setTimeout(() => setScanToast(null), 4000);
+          setTimeout(() => setGateVisitor(generateNextVisitor()), 2000);
+      } else {
+          onShowNotificationRef.current('No available slots found!', 'info');
+          setTimeout(() => setGateVisitor(generateNextVisitor()), 800);
+      }
+  };
+
+  // Fully synchronous scan — no stale closures possible
+  const handleSimulateScan = () => {
+      if (isScanning) return;
+      setIsScanning(true);
+      const newVisitor = generateNextVisitor();
+      setGateVisitor(newVisitor);
+
+      // Give React one tick to render the visitor card, then allocate
+      setTimeout(() => {
+          setIsScanning(false);
+          autoAllocateVisitor(newVisitor);
+      }, 900);
   };
 
   const handleConfirmExit = () => {
@@ -231,41 +349,80 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                   <button onClick={() => setShowManualEntry(true)} className="text-[9px] bg-primary/10 text-primary px-3 py-1 rounded border border-primary/20 hover:bg-primary/20 font-bold uppercase">Manual Entry</button>
               </div>
 
-              {/* Scanner Feed */}
-              <div className="relative bg-black rounded-2xl overflow-hidden border border-white/10 shadow-lg h-48 mb-6 group cursor-pointer" onClick={() => setIsScannerExpanded(!isScannerExpanded)}>
-                   <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=800" className="w-full h-full object-cover opacity-60" />
-                   <div className="absolute inset-0 flex items-center justify-center">
-                       <div className="bg-black/80 backdrop-blur border border-primary/50 px-4 py-2 rounded text-primary font-mono text-lg tracking-widest shadow-[0_0_20px_rgba(242,204,13,0.3)]">
-                           {displayOccupant.plateNumber}
+              {displayOccupant && (
+                <>
+                  {/* Scanner Feed */}
+                  <div className="relative bg-black rounded-2xl overflow-hidden border border-white/10 shadow-lg h-48 mb-6 group cursor-pointer" onClick={() => setIsScannerExpanded(!isScannerExpanded)}>
+                       <img src="https://images.unsplash.com/photo-1506521781263-d8422e82f27a?auto=format&fit=crop&q=80&w=800" className="w-full h-full object-cover opacity-60" />
+                       <div className="absolute inset-0 flex items-center justify-center">
+                           <div className="bg-black/80 backdrop-blur border border-primary/50 px-4 py-2 rounded text-primary font-mono text-lg tracking-widest shadow-[0_0_20px_rgba(242,204,13,0.3)]">
+                               {displayOccupant.plateNumber}
+                           </div>
                        </div>
-                   </div>
-                   <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/50 animate-[scan_3s_linear_infinite]"></div>
-              </div>
+                       <div className="absolute top-0 left-0 w-full h-[2px] bg-primary/50 animate-[scan_3s_linear_infinite]"></div>
+                  </div>
 
-              {/* Vehicle Card */}
-              <div className="bg-[#141414] border border-white/5 rounded-2xl p-5 shadow-lg">
-                  <div className="flex items-start gap-4 mb-4">
-                      <img src={displayOccupant.photoUrl} className="w-12 h-12 rounded bg-slate-800 object-cover" />
-                      <div>
-                          <span className={`text-[9px] px-2 py-0.5 rounded border uppercase font-bold ${displayOccupant.role === 'VIP' ? 'text-amber-500 border-amber-500/20 bg-amber-500/10' : 'text-primary border-primary/20 bg-primary/10'}`}>{displayOccupant.role}</span>
-                          <h3 className="text-lg font-black text-white">{displayOccupant.ownerName}</h3>
-                          <div className="flex flex-col">
-                              <p className="text-[10px] text-slate-500">{displayOccupant.vehicleType}</p>
-                              {displayOccupant.role === 'STUDENT' && (
-                                  <p className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">{displayOccupant.studentType}</p>
-                              )}
+                  {/* Vehicle Card */}
+                  <div className="bg-[#141414] border border-white/5 rounded-2xl p-5 shadow-lg">
+                      <div className="flex items-start gap-4 mb-4">
+                          <img src={displayOccupant.photoUrl} className="w-12 h-12 rounded bg-slate-800 object-cover" />
+                          <div>
+                              <span className={`text-[9px] px-2 py-0.5 rounded border uppercase font-bold ${displayOccupant.role === 'VIP' ? 'text-amber-500 border-amber-500/20 bg-amber-500/10' : 'text-primary border-primary/20 bg-primary/10'}`}>{displayOccupant.role}</span>
+                              <h3 className="text-lg font-black text-white">{displayOccupant.ownerName}</h3>
+                              <div className="flex flex-col">
+                                  <p className="text-[10px] text-slate-500">{displayOccupant.vehicleType}</p>
+                                  {displayOccupant.role === 'STUDENT' && (
+                                      <p className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-wider">{displayOccupant.studentType}</p>
+                                  )}
+                              </div>
                           </div>
                       </div>
+                      
+                      {/* Action Buttons */}
+                      {!selectedSlot || selectedSlot.status === 'AVAILABLE' ? (
+                          <div className="flex flex-col gap-2">
+                            <button onClick={() => selectedSlot ? handleConfirmAllocation() : onShowNotification('Select a slot on the map first', 'info')} className="w-full py-3 bg-primary text-black rounded-lg font-black uppercase text-xs hover:brightness-110 transition-all">
+                                {selectedSlot ? 'Allocate to Selected Slot' : 'Select Slot on Map'}
+                            </button>
+                          </div>
+                      ) : (
+                          <div className="p-3 bg-white/5 rounded text-center text-xs text-slate-400 font-bold uppercase">Slot Occupied</div>
+                      )}
                   </div>
-                  
-                  {/* Action Buttons */}
-                  {!selectedSlot || selectedSlot.status === 'AVAILABLE' ? (
-                      <button onClick={() => selectedSlot ? handleConfirmAllocation() : onShowNotification('Select a slot on the map first', 'info')} className="w-full py-3 bg-primary text-black rounded-lg font-black uppercase text-xs hover:brightness-110 transition-all">
-                          {selectedSlot ? 'Allocate to Selected Slot' : 'Select Slot on Map'}
+                </>
+              )}
+
+              {/* Automated Scanner System */}
+              <div className="mt-6 border border-dashed border-primary/30 bg-[#141414] rounded-2xl p-5 shadow-lg relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-primary font-black text-xs uppercase tracking-widest flex items-center gap-2">
+                         <span className={`material-icons-round text-sm ${autoScanEnabled ? 'animate-pulse' : ''}`}>qr_code_scanner</span>
+                         Automated Scanner
+                      </h3>
+                      {/* Toggle Switch */}
+                      <button
+                          onClick={() => setAutoScanEnabled(v => !v)}
+                          className={`relative w-11 h-6 rounded-full transition-all duration-300 ${autoScanEnabled ? 'bg-primary' : 'bg-white/10'}`}
+                      >
+                          <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-300 ${autoScanEnabled ? 'translate-x-5' : 'translate-x-0'}`}></span>
                       </button>
-                  ) : (
-                      <div className="p-3 bg-white/5 rounded text-center text-xs text-slate-400 font-bold uppercase">Slot Occupied</div>
-                  )}
+                  </div>
+                  <p className="text-[10px] text-slate-500 mb-4">
+                      {autoScanEnabled ? <span className="text-primary font-bold">● Live — Auto-scanning every 8s</span> : 'Toggle ON for continuous auto-scan, or trigger manually.'}
+                  </p>
+                  
+                  <button 
+                      onClick={handleSimulateScan}
+                      disabled={isScanning}
+                      className="w-full py-3 bg-black border border-primary/20 text-primary rounded-lg font-black uppercase text-xs hover:bg-primary/10 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                      {isScanning ? (
+                          <><span className="material-icons-round animate-spin text-sm">sync</span> Processing Scan...</>
+                      ) : (
+                          <><span className="material-icons-round text-sm">aod</span> Simulate QR Scan</>
+                      )}
+                  </button>
               </div>
            </div>
         </aside>
@@ -274,15 +431,34 @@ export const FloorMap: React.FC<FloorMapProps> = ({
       {/* Map Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
          <header className="h-20 bg-[#0e0e0e] border-b border-white/5 flex items-center justify-between px-8 z-40 shadow-xl shrink-0">
-             <div className="flex items-center gap-6">
-                 <select value={selectedLevelId} onChange={(e) => setSelectedLevelId(parseInt(e.target.value))} className="bg-[#151515] text-white text-sm font-bold pl-4 pr-8 py-2 rounded-lg border border-white/10 outline-none">
-                     {LEVELS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                 </select>
-                 <div className="flex gap-4 text-[10px] font-black uppercase tracking-wider text-slate-500">
-                     <span className="flex items-center gap-2"><span className="w-2 h-2 bg-emerald-500 rounded-full"></span> Open</span>
-                     <span className="flex items-center gap-2"><span className="w-2 h-2 bg-red-600 rounded-full"></span> Occupied</span>
-                 </div>
-             </div>
+          <div className="flex items-center gap-6">
+              <div className="relative group">
+                <select 
+                  value={selectedLevelId} 
+                  onChange={(e) => setSelectedLevelId(parseInt(e.target.value))} 
+                  className="appearance-none bg-[#151515] text-white text-[10px] font-black uppercase tracking-widest pl-4 pr-10 py-2.5 rounded-xl border border-white/10 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all cursor-pointer"
+                >
+                    {LEVELS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+                <span className="material-icons-round absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-sm group-hover:text-primary transition-colors">unfold_more</span>
+              </div>
+
+              <div className="flex gap-6 text-[9px] font-black uppercase tracking-[0.2em] text-slate-500 items-center">
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span> Open</span>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.5)]"></span> Allocating</span>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> Occupied</span>
+                  <div className="w-px h-4 bg-white/10 mx-2"></div>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span> VIP Open</span>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]"></span> VIP Occupied</span>
+                  <div className="w-px h-4 bg-white/10 mx-2"></div>
+                  {autoScanEnabled && (
+                    <span className="flex items-center gap-2.5 text-primary animate-pulse">
+                      <span className="w-2 h-2 bg-primary rounded-full shadow-[0_0_12px_rgba(242,204,13,0.8)]"></span> 
+                      System Armed
+                    </span>
+                  )}
+              </div>
+          </div>
              <div className="px-4 py-2 bg-[#151515] rounded border border-white/5">
                  <span className="text-[9px] text-slate-500 font-black uppercase tracking-widest block">Available</span>
                  <span className="text-xl font-mono font-black text-primary">{currentLevelSlots.filter(s => s.status === 'AVAILABLE').length}</span>
@@ -291,18 +467,30 @@ export const FloorMap: React.FC<FloorMapProps> = ({
 
          <div className="flex-1 overflow-auto custom-scrollbar bg-[#0b0c10] p-8">
              <div className="min-w-[1200px] mx-auto flex gap-6 justify-center">
-                 <div className="flex flex-col gap-32 py-20 sticky left-0 z-10"><LiftBlock label="Lift A" /></div>
+                 <div className="flex flex-col gap-32 py-20 sticky left-0 z-10">
+                     <LiftBlock label="Lift A" />
+                     <LiftBlock label="Lift C" />
+                 </div>
                  <div className="flex-1 flex gap-12 max-w-[1600px]">
                      <div className="flex-1 bg-[#0f0f0f] border border-white/5 rounded-3xl p-6 relative">
                          <div className="absolute -top-3 left-8 bg-[#1a1a1a] px-4 py-1 text-[9px] font-black text-slate-400 uppercase rounded border border-white/5">Zone A</div>
-                         {westWingRows.map((row, idx) => <ParkingRow key={`w-${idx}`} slots={row} rowIndex={idx} wing="west" selectedLevelId={selectedLevelId} selectedSlotId={selectedSlotId} onSlotClick={(s) => setSelectedSlotId(s.slotId === selectedSlotId ? null : s.slotId)} />)}
+                         {westWingRows.map((row, idx) => <ParkingRow key={`w-${idx}`} slots={row} rowIndex={idx} wing="west" selectedLevelId={selectedLevelId} selectedSlotId={selectedSlotId} onSlotClick={(s) => {
+                            if (s.status === 'RESERVED') { setReservedInfoSlot(s); return; }
+                            setSelectedSlotId(s.slotId === selectedSlotId ? null : s.slotId);
+                          }} />)}
                      </div>
                      <div className="flex-1 bg-[#0f0f0f] border border-white/5 rounded-3xl p-6 relative">
                          <div className="absolute -top-3 right-8 bg-[#1a1a1a] px-4 py-1 text-[9px] font-black text-slate-400 uppercase rounded border border-white/5">Zone B</div>
-                         {eastWingRows.map((row, idx) => <ParkingRow key={`e-${idx}`} slots={row} rowIndex={idx} wing="east" selectedLevelId={selectedLevelId} selectedSlotId={selectedSlotId} onSlotClick={(s) => setSelectedSlotId(s.slotId === selectedSlotId ? null : s.slotId)} />)}
+                         {eastWingRows.map((row, idx) => <ParkingRow key={`e-${idx}`} slots={row} rowIndex={idx} wing="east" selectedLevelId={selectedLevelId} selectedSlotId={selectedSlotId} onSlotClick={(s) => {
+                            if (s.status === 'RESERVED') { setReservedInfoSlot(s); return; }
+                            setSelectedSlotId(s.slotId === selectedSlotId ? null : s.slotId);
+                          }} />)}
                      </div>
                  </div>
-                 <div className="flex flex-col gap-32 py-20 sticky right-0 z-10"><LiftBlock label="Lift B" /></div>
+                 <div className="flex flex-col gap-32 py-20 sticky right-0 z-10">
+                     <LiftBlock label="Lift B" />
+                     <LiftBlock label="Lift D" />
+                 </div>
              </div>
          </div>
 
@@ -316,6 +504,39 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                          <p className="text-sm text-slate-300">Assign <strong>{gateVisitor.plateNumber}</strong> to <strong className="text-primary">Slot {selectedSlot.slotNumber}</strong>?</p>
                      </div>
                      <button onClick={handleConfirmAllocation} className="w-full py-4 bg-primary text-black rounded-xl font-black uppercase text-xs hover:brightness-110 shadow-[0_0_20px_rgba(242,204,13,0.4)]">Confirm & Assign</button>
+                 </div>
+             </div>
+         )}
+
+         {/* Reserved Slot Info Modal */}
+         {reservedInfoSlot && (
+             <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setReservedInfoSlot(null)}>
+                 <div className="w-[420px] bg-[#141414] border border-primary/30 rounded-3xl p-8 relative shadow-2xl" onClick={e => e.stopPropagation()}>
+                     <button onClick={() => setReservedInfoSlot(null)} className="absolute top-5 right-5 text-slate-500 hover:text-white"><span className="material-icons-round">close</span></button>
+                     <div className="flex items-center gap-3 mb-6">
+                         <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
+                             <span className="material-icons-round text-primary">lock</span>
+                         </div>
+                         <div>
+                             <span className="text-[9px] font-black text-primary uppercase tracking-widest block">Level 1 — Slot {reservedInfoSlot.slotNumber}</span>
+                             <h2 className="text-2xl font-black text-white uppercase">{reservedInfoSlot.reservedFor}</h2>
+                         </div>
+                     </div>
+                     <div className="bg-black/40 p-5 rounded-2xl border border-white/5 mb-6 space-y-3">
+                         <div className="flex justify-between items-center">
+                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Status</span>
+                             <span className="text-xs font-black text-primary flex items-center gap-1"><span className="w-2 h-2 bg-primary rounded-full animate-pulse"></span> Permanently Reserved</span>
+                         </div>
+                         <div className="flex justify-between items-center">
+                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Slot</span>
+                             <span className="text-xs font-mono font-black text-white">{reservedInfoSlot.slotId}</span>
+                         </div>
+                         <div className="flex justify-between items-center">
+                             <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Category</span>
+                             <span className="text-xs font-black text-amber-400 uppercase">{reservedInfoSlot.category}</span>
+                         </div>
+                     </div>
+                     <p className="text-[10px] text-slate-500 text-center">This slot is exclusively reserved and cannot be reassigned.</p>
                  </div>
              </div>
          )}
@@ -366,6 +587,25 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                          
                          <button onClick={handleManualSubmit} className="w-full py-3 bg-primary text-black rounded font-black uppercase text-xs mt-4">Submit Entry</button>
                      </div>
+                 </div>
+             </div>
+         )}
+
+         {/* Bottom-right Scan Toast */}
+         {scanToast && (
+             <div className="fixed bottom-6 right-6 z-[200] animate-in slide-in-from-bottom-4 fade-in duration-300">
+                 <div className="bg-[#111] border border-emerald-500/40 rounded-2xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex items-start gap-4 w-80">
+                     <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                         <span className="material-icons-round text-emerald-400 text-lg">check_circle</span>
+                     </div>
+                     <div className="flex-1 min-w-0">
+                         <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-0.5">Slot Allocated</p>
+                         <p className="text-white font-black text-sm font-mono">{scanToast.plate}</p>
+                         <p className="text-slate-400 text-[10px] mt-0.5">Level {scanToast.level} · Slot {scanToast.slot}</p>
+                     </div>
+                     <button onClick={() => setScanToast(null)} className="text-slate-600 hover:text-white shrink-0">
+                         <span className="material-icons-round text-sm">close</span>
+                     </button>
                  </div>
              </div>
          )}

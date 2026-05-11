@@ -39,6 +39,7 @@ export interface ParkingSlot {
   slotNumber: number;       // e.g., 101
   status: SlotStatus;
   category: Role;           // Designated category for this slot
+  reservedFor?: string;     // Explicitly reserved name (e.g., "PROVOST")
   
   vehicleId?: string;       // FK to Vehicle (nullable)
   

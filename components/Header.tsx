@@ -5,9 +5,12 @@ import { AuthUser } from '../types';
 interface HeaderProps {
   currentTime: Date;
   user: AuthUser;
+  onLogout: () => void;
+  isDarkMode: boolean;
+  onToggleTheme: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentTime, user }) => {
+export const Header: React.FC<HeaderProps> = ({ currentTime, user, onLogout, isDarkMode, onToggleTheme }) => {
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-US', {
       month: 'short',
@@ -42,17 +45,39 @@ export const Header: React.FC<HeaderProps> = ({ currentTime, user }) => {
         </div>
 
         <div className="flex items-center gap-4 pl-8 border-l border-white/5">
+          {/* Dark / Light Mode Toggle */}
+          <button
+            onClick={onToggleTheme}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+            className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-all group relative overflow-hidden"
+          >
+            <span
+              className={`material-icons-round text-lg transition-all duration-300 ${
+                isDarkMode ? 'opacity-100 rotate-0' : 'opacity-0 rotate-90 absolute'
+              }`}
+            >
+              light_mode
+            </span>
+            <span
+              className={`material-icons-round text-lg transition-all duration-300 ${
+                !isDarkMode ? 'opacity-100 rotate-0' : 'opacity-0 -rotate-90 absolute'
+              }`}
+            >
+              dark_mode
+            </span>
+          </button>
+
           <div className="text-right">
             <p className="text-xs font-bold text-white">{user.name}</p>
             <p className="text-[9px] text-slate-500 uppercase tracking-widest">{user.stationId} • {user.role}</p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center border border-primary/30 overflow-hidden">
-             {user.avatarUrl ? (
-                 <img src={user.avatarUrl} alt="User" className="w-full h-full object-cover" />
-             ) : (
-                <span className="material-icons-round text-primary text-sm">account_circle</span>
-             )}
-          </div>
+          <button 
+            onClick={onLogout}
+            className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 flex items-center justify-center text-red-500 hover:bg-red-500 hover:text-white transition-all group"
+            title="Secure Logout"
+          >
+            <span className="material-icons-round text-lg group-hover:rotate-12 transition-transform">logout</span>
+          </button>
         </div>
       </div>
     </header>

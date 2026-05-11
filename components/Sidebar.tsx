@@ -5,9 +5,10 @@ import { ViewType } from '../types';
 interface SidebarProps {
   activeView: ViewType;
   onViewChange: (view: ViewType) => void;
+  onClearAll: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onClearAll }) => {
   const navItems: { id: ViewType; icon: string; label: string }[] = [
     { id: 'DASHBOARD', icon: 'dashboard', label: 'Dashboard' },
     { id: 'GATE_SCAN', icon: 'sensor_window', label: 'Scanner' },
@@ -41,7 +42,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) =>
         ))}
       </nav>
 
-      <div className="flex flex-col gap-4 items-center">
+      <div className="flex flex-col gap-6 items-center">
+        <button 
+            onClick={onClearAll}
+            className="w-10 h-10 rounded-xl bg-red-600/10 border border-red-500/20 text-red-500 hover:bg-red-600 hover:text-white transition-all group relative"
+            title="Clear All Slots"
+        >
+          <span className="material-icons-round text-lg">delete_sweep</span>
+          <span className="absolute left-full ml-4 px-2 py-1 bg-red-600 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity uppercase tracking-widest font-black z-50 shadow-xl">
+             Clear All Slots
+          </span>
+        </button>
+        
+        <div className="w-8 h-px bg-white/5"></div>
+
         <button 
             onClick={() => onViewChange('SETTINGS')}
             className={`transition-colors ${activeView === 'SETTINGS' ? 'text-primary' : 'text-slate-500 hover:text-primary'}`}
