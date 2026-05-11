@@ -1,0 +1,7 @@
+{
+  "name": "UniPark Smart Console",
+  "description": "A high-tech, real-time parking security and management dashboard featuring live gate scanning, multi-level occupancy monitoring, and automated slot allocation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
