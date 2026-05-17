@@ -37,34 +37,28 @@ const getSlotColorClasses = (slot: ParkingSlot, selectedLevelId: number, selecte
     const isReserved = slot.status === 'RESERVED';
     const isSelected = slot.slotId === selectedSlotId;
 
-    // Level 1 slots 197–200 are special VIP unresolved slots
-    const isSpecialVip = slot.levelId === 1 && slot.slotNumber >= 197 && slot.slotNumber <= 200;
+    // VIP category slots get orange treatment
+    const isVipCategory = slot.category === 'VIP';
 
     let classes = "relative transition-all duration-500 rounded-xl shadow-lg border flex items-center justify-center overflow-hidden cursor-pointer ";
 
-    // Permanently reserved (Level 1, 101–196): always white with lock
+    // Permanently reserved slots — differentiate VIP (orange) vs Faculty (white)
     if (isReserved) {
+      if (isVipCategory) {
+        // VIP reserved: orange
+        return classes + "bg-orange-500 border-orange-400 text-white z-20 shadow-[0_0_20px_rgba(249,115,22,0.35)] hover:scale-105";
+      }
+      // Faculty reserved: white
       return classes + "bg-white border-slate-200 text-black z-20 shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105";
     }
 
-    if (isSpecialVip) {
-      // Level 1 slots 197–200: Blue → Yellow → White
-      if (isOccupied) {
-        classes += "bg-white border-white/80 text-black shadow-[0_0_20px_rgba(255,255,255,0.25)] animate-in fade-in zoom-in duration-500 ";
-      } else if (isSelected) {
-        classes += "bg-yellow-400 border-yellow-300 text-black shadow-[0_0_18px_rgba(250,204,21,0.7)] ring-2 ring-yellow-300 ring-offset-1 ring-offset-black z-40 scale-110 ";
-      } else {
-        classes += "bg-blue-600 border-blue-500 text-white shadow-[0_0_12px_rgba(59,130,246,0.4)] hover:brightness-125 hover:scale-105 ";
-      }
+    // Normal slots: Green → Yellow → Red
+    if (isOccupied) {
+      classes += "bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/30 animate-in fade-in zoom-in duration-500 ";
+    } else if (isSelected) {
+      classes += "bg-yellow-400 border-yellow-300 text-black shadow-[0_0_18px_rgba(250,204,21,0.7)] ring-2 ring-yellow-300 ring-offset-1 ring-offset-black z-40 scale-110 ";
     } else {
-      // Normal slots (Levels 2–5 and remaining Level 1 slots): Green → Yellow → Red
-      if (isOccupied) {
-        classes += "bg-red-600 border-red-500 text-white shadow-xl shadow-red-900/30 animate-in fade-in zoom-in duration-500 ";
-      } else if (isSelected) {
-        classes += "bg-yellow-400 border-yellow-300 text-black shadow-[0_0_18px_rgba(250,204,21,0.7)] ring-2 ring-yellow-300 ring-offset-1 ring-offset-black z-40 scale-110 ";
-      } else {
-        classes += "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.35)] hover:brightness-110 hover:scale-105 ";
-      }
+      classes += "bg-emerald-500 border-emerald-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.35)] hover:brightness-110 hover:scale-105 ";
     }
 
     return classes;
@@ -119,12 +113,21 @@ const ParkingRow: React.FC<{
                 <span className="text-[8px] font-black opacity-70 tracking-tighter">{slot.slotNumber}</span>
              </div>
           ) : slot.reservedFor ? (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-0.5 overflow-hidden">
-               <span className="text-[8px] font-black text-black leading-none">{slot.slotNumber}</span>
-               <span className="material-icons-round text-black" style={{fontSize: '9px', lineHeight: '1'}}>lock</span>
-               <span className="text-[4.5px] font-black text-black uppercase tracking-tight text-center leading-tight w-full truncate px-0.5">
-                   {slot.reservedFor}
-               </span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10 px-1 overflow-hidden">
+               {slot.category === 'VIP' ? (
+                 <>
+                   <span className="text-[8px] font-black text-white leading-none">{slot.slotNumber}</span>
+                   <span className="material-icons-round text-white" style={{fontSize: '9px', lineHeight: '1'}}>lock</span>
+                 </>
+               ) : (
+                 <>
+                   <span className="text-[8px] font-black text-black leading-none">{slot.slotNumber}</span>
+                   <span className="material-icons-round text-black" style={{fontSize: '8px', lineHeight: '1'}}>lock</span>
+                   <span className="text-[5px] font-black text-black uppercase tracking-widest text-center leading-tight">
+                       FACULTY
+                   </span>
+                 </>
+               )}
             </div>
           ) : (
             <div className="flex flex-col items-center">
@@ -448,8 +451,8 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                   <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-yellow-400 rounded-full shadow-[0_0_10px_rgba(250,204,21,0.5)]"></span> Allocating</span>
                   <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-red-600 rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"></span> Occupied</span>
                   <div className="w-px h-4 bg-white/10 mx-2"></div>
-                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-blue-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></span> VIP Open</span>
-                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]"></span> VIP Occupied</span>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_10px_rgba(249,115,22,0.5)]"></span> VIP Reserved</span>
+                  <span className="flex items-center gap-2.5"><span className="w-2 h-2 bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.3)]"></span> Faculty Reserved</span>
                   <div className="w-px h-4 bg-white/10 mx-2"></div>
                   {autoScanEnabled && (
                     <span className="flex items-center gap-2.5 text-primary animate-pulse">
@@ -469,7 +472,6 @@ export const FloorMap: React.FC<FloorMapProps> = ({
              <div className="min-w-[1200px] mx-auto flex gap-6 justify-center">
                  <div className="flex flex-col gap-32 py-20 sticky left-0 z-10">
                      <LiftBlock label="Lift A" />
-                     <LiftBlock label="Lift C" />
                  </div>
                  <div className="flex-1 flex gap-12 max-w-[1600px]">
                      <div className="flex-1 bg-[#0f0f0f] border border-white/5 rounded-3xl p-6 relative">
@@ -489,7 +491,6 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                  </div>
                  <div className="flex flex-col gap-32 py-20 sticky right-0 z-10">
                      <LiftBlock label="Lift B" />
-                     <LiftBlock label="Lift D" />
                  </div>
              </div>
          </div>
@@ -514,12 +515,14 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                  <div className="w-[420px] bg-[#141414] border border-primary/30 rounded-3xl p-8 relative shadow-2xl" onClick={e => e.stopPropagation()}>
                      <button onClick={() => setReservedInfoSlot(null)} className="absolute top-5 right-5 text-slate-500 hover:text-white"><span className="material-icons-round">close</span></button>
                      <div className="flex items-center gap-3 mb-6">
-                         <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-                             <span className="material-icons-round text-primary">lock</span>
+                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${reservedInfoSlot.category === 'VIP' ? 'bg-orange-500/20 border border-orange-500/30' : 'bg-primary/20 border border-primary/30'}`}>
+                             <span className={`material-icons-round ${reservedInfoSlot.category === 'VIP' ? 'text-orange-400' : 'text-primary'}`}>lock</span>
                          </div>
                          <div>
-                             <span className="text-[9px] font-black text-primary uppercase tracking-widest block">Level 1 — Slot {reservedInfoSlot.slotNumber}</span>
-                             <h2 className="text-2xl font-black text-white uppercase">{reservedInfoSlot.reservedFor}</h2>
+                             <span className="text-[9px] font-black text-primary uppercase tracking-widest block">Level {reservedInfoSlot.levelId} — Slot {reservedInfoSlot.slotNumber}</span>
+                             <h2 className="text-2xl font-black text-white uppercase">
+                               {reservedInfoSlot.category === 'VIP' ? 'VIP Reserved' : 'Faculty'}
+                             </h2>
                          </div>
                      </div>
                      <div className="bg-black/40 p-5 rounded-2xl border border-white/5 mb-6 space-y-3">
@@ -533,7 +536,7 @@ export const FloorMap: React.FC<FloorMapProps> = ({
                          </div>
                          <div className="flex justify-between items-center">
                              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Category</span>
-                             <span className="text-xs font-black text-amber-400 uppercase">{reservedInfoSlot.category}</span>
+                             <span className={`text-xs font-black uppercase ${reservedInfoSlot.category === 'VIP' ? 'text-orange-400' : 'text-amber-400'}`}>{reservedInfoSlot.category}</span>
                          </div>
                      </div>
                      <p className="text-[10px] text-slate-500 text-center">This slot is exclusively reserved and cannot be reassigned.</p>

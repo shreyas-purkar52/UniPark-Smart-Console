@@ -3,7 +3,7 @@ import { AuthUser, ParkingSlot, ParkingLog, Vehicle, Role } from './types';
 import { MOCK_USERS_DB, STORAGE_KEYS, initializeParkingDatabase } from './constants';
 
 // Increment this whenever the slot schema/roles change — forces auto-reinit
-const DB_VERSION = '2025-05-11-v3';
+const DB_VERSION = '2026-05-17-v6';
 
 // Helper to simulate delay for realistic feel
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

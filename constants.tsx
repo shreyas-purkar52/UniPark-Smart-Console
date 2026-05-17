@@ -9,11 +9,11 @@ export const STORAGE_KEYS = {
 };
 
 export const LEVELS = [
-  { id: 1, name: 'Level 01 - Faculty & VIP', capacity: 500, category: 'MIXED' },
-  { id: 2, name: 'Level 02 - Student North', capacity: 500, category: 'STUDENT' },
-  { id: 3, name: 'Level 03 - Student South', capacity: 500, category: 'STUDENT' },
-  { id: 4, name: 'Level 04 - Student West', capacity: 500, category: 'STUDENT' },
-  { id: 5, name: 'Level 05 - Visitor Parking', capacity: 500, category: 'VISITOR' },
+  { id: 1, name: 'Level 01 - Faculty & VIP', capacity: 100, category: 'MIXED' },
+  { id: 2, name: 'Level 02 - Student North', capacity: 100, category: 'STUDENT' },
+  { id: 3, name: 'Level 03 - Student South', capacity: 100, category: 'STUDENT' },
+  { id: 4, name: 'Level 04 - Student West', capacity: 100, category: 'STUDENT' },
+  { id: 5, name: 'Level 05 - Visitor Parking', capacity: 100, category: 'VISITOR' },
 ];
 
 // Initial Empty Database State
@@ -56,7 +56,7 @@ export const MOCK_GATE_VISITOR: Vehicle = {
   entryTime: new Date().toLocaleTimeString('en-US', { hour12: false })
 };
 
-// Slots 101–196 on Level 1 are permanently reserved for specific university roles
+// Level 1 slots 101–120: permanently reserved VIP spots (orange)
 const VIP_RESERVED_ROLES: Record<number, string> = {
   101: 'Chancellor',
   102: 'President',
@@ -78,6 +78,10 @@ const VIP_RESERVED_ROLES: Record<number, string> = {
   118: 'HOD',
   119: 'Dept. Coordinator',
   120: 'Professor',
+};
+
+// Level 1 slots 121–150: permanently reserved Faculty spots (white)
+const FACULTY_RESERVED_ROLES: Record<number, string> = {
   121: 'Assoc. Professor',
   122: 'Asst. Professor',
   123: 'Senior Lecturer',
@@ -108,52 +112,6 @@ const VIP_RESERVED_ROLES: Record<number, string> = {
   148: 'PRO',
   149: 'Legal Advisor',
   150: 'Finance Director',
-  151: 'Accounts Manager',
-  152: 'Accountant',
-  153: 'Cashier',
-  154: 'Audit Officer',
-  155: 'Procurement',
-  156: 'HR Director',
-  157: 'HR Manager',
-  158: 'Recruitment',
-  159: 'Training Coord.',
-  160: 'Payroll Officer',
-  161: 'IT Director',
-  162: 'Sys. Administrator',
-  163: 'Network Engineer',
-  164: 'Software Developer',
-  165: 'Web Administrator',
-  166: 'Database Admin',
-  167: 'Cybersecurity',
-  168: 'Tech. Support',
-  169: 'Chief Librarian',
-  170: 'Asst. Librarian',
-  171: 'Archivist',
-  172: 'Library Assistant',
-  173: 'Research Director',
-  174: 'Innovation Mgr.',
-  175: 'Research Coord.',
-  176: 'Patent Officer',
-  177: 'Project Manager',
-  178: 'Campus Manager',
-  179: 'Maintenance Supvr.',
-  180: 'Transport Manager',
-  181: 'Security Officer',
-  182: 'Housekeeping Supvr.',
-  183: 'Cafeteria Manager',
-  184: 'Admissions Director',
-  185: 'Admissions Counselor',
-  186: 'Marketing Manager',
-  187: 'Social Media Mgr.',
-  188: 'Branding Coord.',
-  189: 'Event Manager',
-  190: 'Student Council Pres.',
-  191: 'Student Council VP',
-  192: 'General Secretary',
-  193: 'Treasurer',
-  194: 'Class Rep (CR)',
-  195: 'Club President',
-  196: 'Event Coordinator',
 };
 
 // Database Initialization Logic
@@ -161,14 +119,15 @@ export const initializeParkingDatabase = (): ParkingSlot[] => {
   const allSlots: ParkingSlot[] = [];
 
   LEVELS.forEach(level => {
-    // Generate 500 slots per level (101 to 600)
-    for (let i = 0; i < 500; i++) {
+    // Generate 100 slots per level (101 to 200)
+    for (let i = 0; i < 100; i++) {
       const slotNum = 101 + i;
 
       // Determine designated category
       let category: Role = 'STUDENT';
       if (level.id === 1) {
-        category = i < 100 ? 'VIP' : 'FACULTY';
+        // First 20 = VIP, next 20 = FACULTY, rest open
+        category = i < 20 ? 'VIP' : 'FACULTY';
       } else {
         category = (level.category as any) === 'MIXED' ? 'FACULTY' : (level.category as Role);
       }
@@ -179,6 +138,9 @@ export const initializeParkingDatabase = (): ParkingSlot[] => {
       if (level.id === 1 && VIP_RESERVED_ROLES[slotNum]) {
         status = 'RESERVED';
         reservedFor = VIP_RESERVED_ROLES[slotNum];
+      } else if (level.id === 1 && FACULTY_RESERVED_ROLES[slotNum]) {
+        status = 'RESERVED';
+        reservedFor = FACULTY_RESERVED_ROLES[slotNum];
       }
 
       allSlots.push({
